@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Password Keeper</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 30px;
+      background-color: #f4f4f4;
+    }
+    h1 {
+      text-align: center;
+    }
+    .container {
+      display: flex;
+      gap: 40px;
+    }
+    .form-section, .list-section {
+      flex: 1;
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .password-item {
+      background: white;
+      padding: 10px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      position: relative;
+    }
+    .password-item button {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      background-color: red;
+      padding: 5px 10px;
+    }
+    #searchInput {
+      width: 300px;
+      padding: 8px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Password Keeper</h1>
+  <p style="text-align:center;">Total Passwords: <span id="totalCount">0</span></p>
+  <div style="text-align:center;">
+    <label for="searchInput">Search:</label>
+    <input type="text" id="searchInput" placeholder="Search by title...">
+  </div>
+
+  <div class="container">
+    <div class="form-section">
+      <label for="title">Title:</label>
+      <input type="text" id="title" placeholder="e.g. Gmail" />
+
+      <label for="password">Password:</label>
+      <input type="password" id="password" placeholder="Enter password" />
+
+      <button onclick="addPassword()">Add</button>
+    </div>
+
+    <div class="list-section">
+      <h3>All Passwords</h3>
+      <div id="passwordList"></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "https://crudcrud.com/api/d0e2a762ed7d4233a81d16c57058a6f8/passwords";
+    let passwords = [];
+
+    function fetchPasswords() {
+      fetch(API_BASE)
+        .then(res => res.json())
+        .then(data => {
+          passwords = data;
+          updateDisplay();
+        })
+        .catch(err => console.error("Fetch error:", err));
+    }
+
+    function addPassword() {
+      const title = document.getElementById("title").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (!title || !password) {
+        alert("Please fill in both fields.");
+        return;
+      }
+
+      fetch(API_BASE, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, password })
+      })
+      .then(() => {
+        document.getElementById("title").value = "";
+        document.getElementById("password").value = "";
+        fetchPasswords();
+      })
+      .catch(err => console.error("Add error:", err));
+    }
+
+    function deletePassword(id) {
+      fetch(`${API_BASE}/${id}`, {
+        method: "DELETE"
+      })
+      .then(() => fetchPasswords())
+      .catch(err => console.error("Delete error:", err));
+    }
+
+    function updateDisplay() {
+      const list = document.getElementById("passwordList");
+      const total = document.getElementById("totalCount");
+      const search = document.getElementById("searchInput").value.toLowerCase();
+
+      list.innerHTML = "";
+      const filtered = passwords.filter(p => p.title.toLowerCase().includes(search));
+
+      filtered.forEach(entry => {
+        const div = document.createElement("div");
+        div.className = "password-item";
+        div.innerHTML = `
+          <strong>${entry.title}</strong><br>
+          <span>${entry.password}</span>
+          <button onclick="deletePassword('${entry._id}')">Delete</button>
+        `;
+        list.appendChild(div);
+      });
+
+      total.textContent = passwords.length;
+    }
+
+    document.getElementById("searchInput").addEventListener("input", updateDisplay);
+    window.onload = fetchPasswords;
+  </script>
+
+</body>
+</html>
